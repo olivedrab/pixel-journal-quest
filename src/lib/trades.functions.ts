@@ -1,0 +1,176 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+
+export const tradeInputSchema = z.object({
+  trade_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+  symbol: z.string().trim().min(1, "Symbol required").max(24),
+  direction: z.enum(["long", "short"]),
+  entry_price: z.number().finite().nullable().optional(),
+  exit_price: z.number().finite().nullable().optional(),
+  position_size: z.number().finite().nullable().optional(),
+  pnl: z.number().finite(),
+  stop_loss: z.number().finite().nullable().optional(),
+  target_price: z.number().finite().nullable().optional(),
+  fees: z.number().finite().nullable().optional(),
+  setup: z.string().trim().max(80).nullable().optional(),
+  tags: z.array(z.string().trim().max(24)).max(12).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+
+export type TradeInput = z.infer<typeof tradeInputSchema>;
+
+export type Trade = TradeInput & {
+  id: string;
+  tags: string[];
+  created_at: string;
+};
+
+export const listTrades = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ from: z.string(), to: z.string() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("trades")
+      .select("*")
+      .gte("trade_date", data.from)
+      .lte("trade_date", data.to)
+      .order("trade_date", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as unknown as Trade[];
+  });
+
+export const createTrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => tradeInputSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("trades")
+      .insert({ ...data, tags: data.tags ?? [], user_id: context.userId });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const createTrades = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ trades: z.array(tradeInputSchema).min(1).max(50) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("trades").insert(
+      data.trades.map((t) => ({ ...t, tags: t.tags ?? [], user_id: context.userId })),
+    );
+    if (error) throw new Error(error.message);
+    return { inserted: data.trades.length };
+  });
+
+export const updateTrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ id: z.string().uuid(), values: tradeInputSchema }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("trades")
+      .update({ ...data.values, tags: data.values.tags ?? [] })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteTrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("trades").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const parsedTradeSchema = z.object({
+  trade_date: z.string().nullable().optional(),
+  symbol: z.string().nullable().optional(),
+  direction: z.string().nullable().optional(),
+  entry_price: z.number().nullable().optional(),
+  exit_price: z.number().nullable().optional(),
+  position_size: z.number().nullable().optional(),
+  pnl: z.number().nullable().optional(),
+  stop_loss: z.number().nullable().optional(),
+  target_price: z.number().nullable().optional(),
+  fees: z.number().nullable().optional(),
+  setup: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export type ParsedTrade = z.infer<typeof parsedTradeSchema>;
+
+export const parseScreenshot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        image: z.string().startsWith("data:image/").max(12_000_000),
+        fallbackDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI is not configured for this project.");
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3.7-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You read screenshots from trading platforms and extract closed trades. " +
+              "Reply with JSON only, shaped {\"trades\":[{...}]}. Each trade may include " +
+              "trade_date (YYYY-MM-DD), symbol, direction ('long' or 'short'), entry_price, " +
+              "exit_price, position_size, pnl (net profit or loss as a number, negative for a loss), " +
+              "stop_loss, target_price, fees, setup, notes. Use null when a value is not visible. " +
+              `If no date is visible, use ${data.fallbackDate}. Never invent trades that are not in the image.`,
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extract every trade you can read from this screenshot." },
+              { type: "image_url", image_url: { url: data.image } },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (response.status === 429) throw new Error("AI rate limit reached — try again shortly.");
+    if (response.status === 402) throw new Error("AI credits exhausted for this workspace.");
+    if (!response.ok) throw new Error("Could not read the screenshot. Try a clearer image.");
+
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const raw = payload.choices?.[0]?.message?.content ?? "{}";
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/\{[\s\S]*\}/);
+      parsedJson = match ? JSON.parse(match[0]) : {};
+    }
+
+    const result = z
+      .object({ trades: z.array(parsedTradeSchema).default([]) })
+      .safeParse(parsedJson);
+
+    return { trades: result.success ? result.data.trades.slice(0, 50) : [] };
+  });
