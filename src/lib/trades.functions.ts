@@ -146,7 +146,8 @@ export const parseScreenshot = createServerFn({ method: "POST" })
             content: [
               {
                 type: "input_text",
-                text: "Extract every trade you can read from this screenshot.",
+                text:
+                  "Extract every trade you can read from this screenshot. Reply with JSON only.",
               },
               { type: "input_image", image_url: data.image },
             ],
