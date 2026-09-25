@@ -121,45 +121,78 @@ export const parseScreenshot = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this project.");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const instructions =
+      "You read screenshots from trading platforms and extract closed trades. " +
+      'Reply with JSON only, shaped {"trades":[{...}]}. Each trade may include ' +
+      "trade_date (YYYY-MM-DD), symbol, direction ('long' or 'short'), entry_price, " +
+      "exit_price, position_size, pnl (net profit or loss as a number, negative for a loss), " +
+      "stop_loss, target_price, fees, setup, notes. Use null when a value is not visible. " +
+      `If no date is visible, use ${data.fallbackDate}. Never invent trades that are not in the image.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "fetch",
       },
       body: JSON.stringify({
-        model: "google/gemini-3.7-flash",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You read screenshots from trading platforms and extract closed trades. " +
-              "Reply with JSON only, shaped {\"trades\":[{...}]}. Each trade may include " +
-              "trade_date (YYYY-MM-DD), symbol, direction ('long' or 'short'), entry_price, " +
-              "exit_price, position_size, pnl (net profit or loss as a number, negative for a loss), " +
-              "stop_loss, target_price, fees, setup, notes. Use null when a value is not visible. " +
-              `If no date is visible, use ${data.fallbackDate}. Never invent trades that are not in the image.`,
-          },
+        model: "openai/gpt-6-astra",
+        instructions,
+        input: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Extract every trade you can read from this screenshot." },
-              { type: "image_url", image_url: { url: data.image } },
+              {
+                type: "input_text",
+                text: "Extract every trade you can read from this screenshot.",
+              },
+              { type: "input_image", image_url: data.image },
             ],
           },
         ],
-        response_format: { type: "json_object" },
+        reasoning: { effort: "low" },
+        text: { format: { type: "json_object" } },
+        store: false,
+        stream: true,
       }),
     });
 
     if (response.status === 429) throw new Error("AI rate limit reached — try again shortly.");
     if (response.status === 402) throw new Error("AI credits exhausted for this workspace.");
-    if (!response.ok) throw new Error("Could not read the screenshot. Try a clearer image.");
+    if (!response.ok || !response.body) {
+      throw new Error("Could not read the screenshot. Try a clearer image.");
+    }
 
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const raw = payload.choices?.[0]?.message?.content ?? "{}";
+    // Consume the SSE stream and collect the model's text output.
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let raw = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const event = JSON.parse(payload) as { type?: string; delta?: string; text?: string };
+          if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
+            raw += event.delta;
+          } else if (event.type === "response.output_text.done" && typeof event.text === "string") {
+            raw = event.text;
+          }
+        } catch {
+          // ignore keep-alive / non-JSON frames
+        }
+      }
+    }
+
     let parsedJson: unknown;
     try {
       parsedJson = JSON.parse(raw);
