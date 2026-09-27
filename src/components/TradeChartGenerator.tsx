@@ -67,7 +67,9 @@ export function TradeChartGenerator({
 
   async function generateAll() {
     for (let index = 0; index < trades.length; index += 1) {
-      await generateOne(trades[index], index);
+      const trade = trades[index];
+      if (!trade) continue;
+      await generateOne(trade, index);
     }
   }
 

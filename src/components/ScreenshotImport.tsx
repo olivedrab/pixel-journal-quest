@@ -5,6 +5,7 @@ import { parseScreenshot, createTrades } from "@/lib/trades.functions";
 import type { ParsedTrade, TradeInput } from "@/lib/trades.functions";
 import { Overlay } from "./TradeFormDialog";
 import { formatMoney } from "@/lib/trade-utils";
+import { TradeChartGenerator } from "./TradeChartGenerator";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -42,6 +43,7 @@ export function ScreenshotImport({
   const [preview, setPreview] = useState<string | null>(null);
   const [rows, setRows] = useState<TradeInput[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [charts, setCharts] = useState<TradeInput[]>([]);
   const parse = useServerFn(parseScreenshot);
   const insert = useServerFn(createTrades);
 
@@ -96,6 +98,7 @@ export function ScreenshotImport({
   }
 
   return (
+    <>
     <Overlay onClose={onClose}>
       <div className="space-y-5">
         <h2 className="pixel-heading text-sm text-primary">Scan a screenshot</h2>
@@ -161,11 +164,23 @@ export function ScreenshotImport({
           >
             Import selected
           </button>
+          <button
+            type="button"
+            disabled={busy || !rows || selected.size === 0}
+            onClick={() => {
+              if (rows) setCharts(rows.filter((_, index) => selected.has(index)));
+            }}
+            className="pixel-btn pixel-btn-ghost"
+          >
+            Generate selected charts
+          </button>
           <button type="button" onClick={onClose} className="pixel-btn pixel-btn-ghost">
             Close
           </button>
         </div>
       </div>
     </Overlay>
+    {charts.length > 0 && <TradeChartGenerator trades={charts} onClose={() => setCharts([])} />}
+    </>
   );
 }
