@@ -62,7 +62,7 @@ async function isAuthorized(request: Request) {
     },
   });
   const { data, error } = await client.auth.getClaims(token);
-  return !error && Boolean(data.claims?.sub);
+  return !error && Boolean(data?.claims?.sub);
 }
 
 export const Route = createFileRoute("/api/generate-trade-chart")({
