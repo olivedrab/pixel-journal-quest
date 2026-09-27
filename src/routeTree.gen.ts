@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedJournalRouteImport } from './routes/_authenticated/journal'
-import { Route as ApiGenerateTradeChartRouteImport } from './routes/api/generate-trade-chart'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,23 +33,16 @@ const AuthenticatedJournalRoute = AuthenticatedJournalRouteImport.update({
   path: '/journal',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiGenerateTradeChartRoute = ApiGenerateTradeChartRouteImport.update({
-  id: '/api/generate-trade-chart',
-  path: '/api/generate-trade-chart',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/journal': typeof AuthenticatedJournalRoute
-  '/api/generate-trade-chart': typeof ApiGenerateTradeChartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/journal': typeof AuthenticatedJournalRoute
-  '/api/generate-trade-chart': typeof ApiGenerateTradeChartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -58,27 +50,19 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/journal': typeof AuthenticatedJournalRoute
-  '/api/generate-trade-chart': typeof ApiGenerateTradeChartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/journal' | '/api/generate-trade-chart'
+  fullPaths: '/' | '/auth' | '/journal'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/journal' | '/api/generate-trade-chart'
-  id:
-    | '__root__'
-    | '/'
-    | '/_authenticated'
-    | '/auth'
-    | '/_authenticated/journal'
-    | '/api/generate-trade-chart'
+  to: '/' | '/auth' | '/journal'
+  id: '__root__' | '/' | '/_authenticated' | '/auth' | '/_authenticated/journal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiGenerateTradeChartRoute: typeof ApiGenerateTradeChartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -111,13 +95,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJournalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/generate-trade-chart': {
-      id: '/api/generate-trade-chart'
-      path: '/api/generate-trade-chart'
-      fullPath: '/api/generate-trade-chart'
-      preLoaderRoute: typeof ApiGenerateTradeChartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -136,7 +113,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiGenerateTradeChartRoute: ApiGenerateTradeChartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
