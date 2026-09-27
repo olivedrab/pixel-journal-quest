@@ -29,7 +29,12 @@ function display(value: number | null) {
 
 function buildPrompt(trade: z.infer<typeof requestSchema>["trade"]) {
   const outcome = trade.pnl >= 0 ? "profitable" : "losing";
-  const move = trade.direction === "long" ? "rising from entry toward exit" : "falling from entry toward exit";
+  const move =
+    trade.entry_price !== null && trade.exit_price !== null
+      ? trade.exit_price >= trade.entry_price
+        ? "rising from the entry price toward the exit price"
+        : "falling from the entry price toward the exit price"
+      : "moving naturally between the marked entry and exit";
   return [
     "Create a realistic landscape screenshot of a professional dark cryptocurrency trading chart platform.",
     `The market is ${trade.symbol}. Show a believable intraday candlestick price path on ${trade.trade_date}, ${move}.`,
