@@ -42,7 +42,6 @@ export function ScreenshotImport({
   const [preview, setPreview] = useState<string | null>(null);
   const [rows, setRows] = useState<TradeInput[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [charts, setCharts] = useState<TradeInput[]>([]);
   const parse = useServerFn(parseScreenshot);
   const insert = useServerFn(createTrades);
 
@@ -97,7 +96,6 @@ export function ScreenshotImport({
   }
 
   return (
-    <>
     <Overlay onClose={onClose}>
       <div className="space-y-5">
         <h2 className="pixel-heading text-sm text-primary">Scan a screenshot</h2>
