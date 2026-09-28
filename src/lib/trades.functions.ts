@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
 
 export const tradeInputSchema = z.object({
@@ -78,9 +80,7 @@ function tradeKey(t: TradeInput) {
 }
 
 async function findExistingKeys(
-  supabase: {
-    from: (table: string) => ReturnType<typeof import("@supabase/supabase-js").PostgrestFilterBuilder>;
-  },
+  supabase: SupabaseClient<Database>,
   dates: string[],
 ): Promise<Set<string>> {
   const { data: rows, error } = await supabase
