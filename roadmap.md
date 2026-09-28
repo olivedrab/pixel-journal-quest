@@ -1,6 +1,5 @@
 # Roadmap
 
-- [x] Add authenticated AI chart screenshot generation for a saved trade.
-- [x] Add preview and PNG download controls to trade details.
-- [x] Generate one screenshot per imported trade from a multi-trade upload.
-- [x] Verify the example upload flow end to end.
+- [x] Remove AI chart generation feature.
+- [x] Add per-trade screenshot upload (private storage, replace/remove, signed-url preview).
+- [x] Verify upload flow end to end in the preview.

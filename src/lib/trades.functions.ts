@@ -24,7 +24,27 @@ export type Trade = TradeInput & {
   id: string;
   tags: string[];
   created_at: string;
+  screenshot_url: string | null;
 };
+
+export const setTradeScreenshot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        screenshotUrl: z.string().trim().max(500).nullable(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("trades")
+      .update({ screenshot_url: data.screenshotUrl })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
 
 export const listTrades = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -17,7 +17,7 @@ import {
 } from "@/lib/trade-utils";
 import { TradeFormDialog } from "@/components/TradeFormDialog";
 import { ScreenshotImport } from "@/components/ScreenshotImport";
-import { TradeChartGenerator } from "@/components/TradeChartGenerator";
+import { TradeScreenshot } from "@/components/TradeScreenshot";
 
 export const Route = createFileRoute("/_authenticated/journal")({
   head: () => ({
@@ -47,7 +47,6 @@ function Journal() {
   const [formFor, setFormFor] = useState<string | null>(null);
   const [editing, setEditing] = useState<Trade | null>(null);
   const [scanFor, setScanFor] = useState<string | null>(null);
-  const [chartsFor, setChartsFor] = useState<Trade[]>([]);
 
   const range = useMemo(() => monthRange(cursor.year, cursor.month), [cursor]);
   const fetchTrades = useServerFn(listTrades);
@@ -244,13 +243,11 @@ function Journal() {
                   {trade.notes && (
                     <p className="mt-3 text-xl text-muted-foreground">{trade.notes}</p>
                   )}
+                  <TradeScreenshot
+                    trade={trade}
+                    onChanged={() => void queryClient.invalidateQueries({ queryKey: ["trades"] })}
+                  />
                   <div className="mt-4 flex gap-3">
-                    <button
-                      className="pixel-btn pixel-btn-primary"
-                      onClick={() => setChartsFor([trade])}
-                    >
-                      Generate chart
-                    </button>
                     <button
                       className="pixel-btn pixel-btn-ghost"
                       onClick={() => {
@@ -295,9 +292,6 @@ function Journal() {
         />
       )}
 
-      {chartsFor.length > 0 && (
-        <TradeChartGenerator trades={chartsFor} onClose={() => setChartsFor([])} />
-      )}
     </main>
   );
 }
