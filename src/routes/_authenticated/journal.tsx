@@ -292,9 +292,6 @@ function Journal() {
         />
       )}
 
-      {chartsFor.length > 0 && (
-        <TradeChartGenerator trades={chartsFor} onClose={() => setChartsFor([])} />
-      )}
     </main>
   );
 }
