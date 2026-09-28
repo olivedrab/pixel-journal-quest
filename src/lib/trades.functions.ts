@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
 
 export const tradeInputSchema = z.object({
@@ -63,10 +65,54 @@ export const listTrades = createServerFn({ method: "GET" })
     return (rows ?? []) as unknown as Trade[];
   });
 
+// A trade is a duplicate when date, symbol, direction, entry, exit, size and
+// P&L all match an existing trade for the same user.
+function tradeKey(t: TradeInput) {
+  return [
+    t.trade_date,
+    t.symbol.toUpperCase(),
+    t.direction,
+    t.entry_price,
+    t.exit_price,
+    t.position_size,
+    t.pnl,
+  ].join("|");
+}
+
+async function findExistingKeys(
+  supabase: SupabaseClient<Database>,
+  dates: string[],
+): Promise<Set<string>> {
+  const { data: rows, error } = await supabase
+    .from("trades")
+    .select("trade_date, symbol, direction, entry_price, exit_price, position_size, pnl")
+    .in("trade_date", dates);
+  if (error) throw new Error(error.message);
+  const keys = new Set<string>();
+  for (const row of rows ?? []) {
+    keys.add(
+      tradeKey({
+        ...(row as unknown as TradeInput),
+        entry_price: row.entry_price === null ? null : Number(row.entry_price),
+        exit_price: row.exit_price === null ? null : Number(row.exit_price),
+        position_size: row.position_size === null ? null : Number(row.position_size),
+        pnl: Number(row.pnl),
+      }),
+    );
+  }
+  return keys;
+}
+
 export const createTrade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => tradeInputSchema.parse(data))
   .handler(async ({ data, context }) => {
+    const existing = await findExistingKeys(context.supabase, [data.trade_date]);
+    if (existing.has(tradeKey(data))) {
+      throw new Error(
+        `This ${data.symbol} ${data.direction} trade on ${data.trade_date} is already in your journal.`,
+      );
+    }
     const { error } = await context.supabase
       .from("trades")
       .insert({ ...data, tags: data.tags ?? [], user_id: context.userId });
@@ -80,11 +126,28 @@ export const createTrades = createServerFn({ method: "POST" })
     z.object({ trades: z.array(tradeInputSchema).min(1).max(50) }).parse(data),
   )
   .handler(async ({ data, context }) => {
+    const dates = [...new Set(data.trades.map((t) => t.trade_date))];
+    const existing = await findExistingKeys(context.supabase, dates);
+    const seen = new Set<string>();
+    const fresh = data.trades.filter((t) => {
+      const key = tradeKey(t);
+      if (existing.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const skipped = data.trades.length - fresh.length;
+    if (fresh.length === 0) {
+      throw new Error(
+        skipped === 1
+          ? "That trade is already in your journal."
+          : `All ${skipped} trades are already in your journal.`,
+      );
+    }
     const { error } = await context.supabase.from("trades").insert(
-      data.trades.map((t) => ({ ...t, tags: t.tags ?? [], user_id: context.userId })),
+      fresh.map((t) => ({ ...t, tags: t.tags ?? [], user_id: context.userId })),
     );
     if (error) throw new Error(error.message);
-    return { inserted: data.trades.length };
+    return { inserted: fresh.length, skipped };
   });
 
 export const updateTrade = createServerFn({ method: "POST" })
