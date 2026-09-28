@@ -161,23 +161,11 @@ export function ScreenshotImport({
           >
             Import selected
           </button>
-          <button
-            type="button"
-            disabled={busy || !rows || selected.size === 0}
-            onClick={() => {
-              if (rows) setCharts(rows.filter((_, index) => selected.has(index)));
-            }}
-            className="pixel-btn pixel-btn-ghost"
-          >
-            Generate selected charts
-          </button>
           <button type="button" onClick={onClose} className="pixel-btn pixel-btn-ghost">
             Close
           </button>
         </div>
       </div>
     </Overlay>
-    {charts.length > 0 && <TradeChartGenerator trades={charts} onClose={() => setCharts([])} />}
-    </>
   );
 }

@@ -17,7 +17,7 @@ import {
 } from "@/lib/trade-utils";
 import { TradeFormDialog } from "@/components/TradeFormDialog";
 import { ScreenshotImport } from "@/components/ScreenshotImport";
-import { TradeChartGenerator } from "@/components/TradeChartGenerator";
+import { TradeScreenshot } from "@/components/TradeScreenshot";
 
 export const Route = createFileRoute("/_authenticated/journal")({
   head: () => ({
