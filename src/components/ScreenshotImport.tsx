@@ -84,8 +84,13 @@ export function ScreenshotImport({
     }
     setBusy(true);
     try {
-      await insert({ data: { trades: chosen } });
-      toast.success(`Imported ${chosen.length} trade${chosen.length > 1 ? "s" : ""}.`);
+      const result = await insert({ data: { trades: chosen } });
+      toast.success(
+        `Imported ${result.inserted} trade${result.inserted > 1 ? "s" : ""}.` +
+          (result.skipped > 0
+            ? ` Skipped ${result.skipped} duplicate${result.skipped > 1 ? "s" : ""}.`
+            : ""),
+      );
       onImported();
       onClose();
     } catch (error) {
