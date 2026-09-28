@@ -5,7 +5,6 @@ import { parseScreenshot, createTrades } from "@/lib/trades.functions";
 import type { ParsedTrade, TradeInput } from "@/lib/trades.functions";
 import { Overlay } from "./TradeFormDialog";
 import { formatMoney } from "@/lib/trade-utils";
-import { TradeChartGenerator } from "./TradeChartGenerator";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
