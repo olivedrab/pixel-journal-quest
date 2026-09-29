@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -42,6 +42,7 @@ function Journal() {
   const today = new Date();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const dayListRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [formFor, setFormFor] = useState<string | null>(null);
