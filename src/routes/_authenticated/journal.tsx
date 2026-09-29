@@ -155,23 +155,25 @@ function Journal() {
                 key={iso}
                 onClick={() => setSelectedDay(iso)}
                 className={[
-                  "pixel-inset min-h-20 p-1 text-left align-top sm:min-h-24 sm:p-2",
+                  "pixel-inset min-h-20 cursor-pointer p-1 text-left align-top hover:border-gold focus-visible:border-gold sm:min-h-24 sm:p-2",
                   inMonth ? "" : "opacity-35",
                   isToday ? "border-gold" : "",
                   dayList.length > 0 && pnl >= 0 ? "bg-profit/15" : "",
                   dayList.length > 0 && pnl < 0 ? "bg-loss/15" : "",
                 ].join(" ")}
               >
-                <span className="font-pixel text-[0.5rem] text-muted-foreground">
+                <span className="font-pixel text-[0.65rem] text-foreground">
                   {date.getDate()}
                 </span>
                 {dayList.length > 0 && (
-                  <span className="mt-1 block text-lg leading-tight">
+                  <span className="mt-1 block text-xl leading-tight">
                     <span className="block text-foreground">
                       {dayList.length}× trade{dayList.length > 1 ? "s" : ""}
                     </span>
-                    <span className={pnl >= 0 ? "text-profit" : "text-loss"}>
-                      {formatMoney(pnl)}
+                    <span className="block font-bold">
+                      <span className={pnl >= 0 ? "text-profit" : "text-loss"}>
+                        {formatMoney(pnl)}
+                      </span>
                     </span>
                   </span>
                 )}
@@ -185,7 +187,7 @@ function Journal() {
       </section>
 
       {selectedDay && (
-        <section className="pixel-panel mt-8 p-4 sm:p-6">
+        <section ref={dayListRef} className="pixel-panel scroll-mt-4 mt-8 p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-pixel text-xs text-gold">{selectedDay}</h2>
             <div className="flex flex-wrap gap-3">
