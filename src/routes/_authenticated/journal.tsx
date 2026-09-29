@@ -77,6 +77,12 @@ function Journal() {
     setCursor({ year: next.getFullYear(), month: next.getMonth() });
   }
 
+  useEffect(() => {
+    if (selectedDay) {
+      dayListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedDay]);
+
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
