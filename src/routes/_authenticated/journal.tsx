@@ -109,6 +109,7 @@ function Journal() {
           <button className="pixel-btn pixel-btn-ghost" onClick={() => setScanFor(toISODate(today))}>
             Scan screenshot
           </button>
+          <HeaderLinks />
           <button className="pixel-btn pixel-btn-ghost" onClick={signOut}>
             Log out
           </button>
