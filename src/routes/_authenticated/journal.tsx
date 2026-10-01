@@ -1,4 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { fetchIsAdmin } from "@/lib/profiles";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -312,5 +313,22 @@ function Detail({ label, value }: { label: string; value: string | number | null
       <dt className="font-pixel text-[0.5rem] text-muted-foreground">{label}</dt>
       <dd>{value === null || value === undefined || value === "" ? "—" : value}</dd>
     </div>
+  );
+}
+
+function HeaderLinks() {
+  const { user } = Route.useRouteContext();
+  const { data: isAdmin } = useQuery({ queryKey: ["is-admin"], queryFn: fetchIsAdmin });
+  return (
+    <>
+      <Link to="/u/$userId" params={{ userId: user.id }} className="pixel-btn pixel-btn-ghost">
+        Profile
+      </Link>
+      {isAdmin && (
+        <Link to="/admin" className="pixel-btn pixel-btn-ghost">
+          Admin
+        </Link>
+      )}
+    </>
   );
 }
