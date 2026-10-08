@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { moveExecutionNotes } from "@/lib/trade-details";
 
 export const tradeInputSchema = z.object({
   trade_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
@@ -26,7 +27,7 @@ export const tradeInputSchema = z.object({
   setup: z.string().trim().max(80).nullable(),
   tags: z.array(z.string().trim().max(24)).max(12),
   notes: z.string().trim().max(2000).nullable(),
-});
+}).transform(moveExecutionNotes);
 
 export type TradeInput = z.infer<typeof tradeInputSchema>;
 
@@ -70,7 +71,7 @@ export const listTrades = createServerFn({ method: "GET" })
       .order("trade_date", { ascending: true })
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as unknown as Trade[];
+    return ((rows ?? []) as unknown as Trade[]).map(moveExecutionNotes);
   });
 
 // A trade is a duplicate when date, symbol, direction, entry, exit, size and

@@ -7,6 +7,33 @@ export function normalizeTradeTimestamp(value: string | null | undefined) {
     : null;
 }
 
+/** Lift legacy scanned execution text into fields without overwriting explicit values. */
+export function moveExecutionNotes<T extends { notes: string | null }>(trade: T) {
+  const extracted = detailsFromNotes(trade.notes);
+  const fields = { ...extracted, ...trade };
+  for (const key of Object.keys(extracted) as (keyof typeof extracted)[]) {
+    if (fields[key] === null || fields[key] === undefined) {
+      Object.assign(fields, { [key]: extracted[key] });
+    }
+  }
+  const amount = "-?\\d+(?:\\.\\d+)?";
+  const timestamp = "\\d{4}[/-]\\d{2}[/-]\\d{2}[ T]\\d{2}:\\d{2}(?::\\d{2})?";
+  const patterns = [
+    `margin\\s*:\\s*${amount}(?:\\s+[A-Za-z]{2,12})?`,
+    `leverage\\s*:\\s*${amount}\\s*[x×]?`,
+    `opened\\s*:?\\s*${timestamp}`,
+    `closed\\s*:?\\s*${timestamp}`,
+    "close type\\s*:\\s*[^;.\\n]+",
+    `trading fee\\s*:\\s*${amount}`,
+    `funding fee\\s*:\\s*${amount}`,
+  ];
+  let notes = trade.notes ?? "";
+  for (const pattern of patterns) {
+    notes = notes.replace(new RegExp(`\\b${pattern}\\s*[;.]?`, "gi"), "");
+  }
+  return { ...fields, notes: notes.replace(/[ \t]+/g, " ").replace(/^[\s;.]+|[\s;.]+$/g, "").trim() || null };
+}
+
 export function detailsFromNotes(notes: string | null | undefined) {
   const text = notes ?? "";
   function amount(label: string) {
