@@ -5,11 +5,15 @@ import { parseScreenshot, createTrades } from "@/lib/trades.functions";
 import type { ParsedTrade, TradeInput } from "@/lib/trades.functions";
 import { Overlay } from "./TradeFormDialog";
 import { formatMoney } from "@/lib/trade-utils";
+import { detailsFromNotes, normalizeTradeTimestamp } from "@/lib/trade-details";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
 function normalize(parsed: ParsedTrade, fallbackDate: string): TradeInput {
   const direction = (parsed.direction ?? "").toLowerCase();
+  const extra = detailsFromNotes(parsed.notes);
+  const tradingFee = parsed.trading_fee ?? extra.trading_fee;
+  const fundingFee = parsed.funding_fee ?? extra.funding_fee;
   return {
     trade_date: /^\d{4}-\d{2}-\d{2}$/.test(parsed.trade_date ?? "")
       ? (parsed.trade_date as string)
@@ -22,7 +26,15 @@ function normalize(parsed: ParsedTrade, fallbackDate: string): TradeInput {
     pnl: parsed.pnl ?? 0,
     stop_loss: parsed.stop_loss ?? null,
     target_price: parsed.target_price ?? null,
-    fees: parsed.fees ?? null,
+    fees: parsed.fees ?? (tradingFee !== null && fundingFee !== null ? tradingFee + fundingFee : null),
+    margin: parsed.margin ?? extra.margin,
+    margin_currency: parsed.margin_currency?.trim().toUpperCase().slice(0, 12) ?? extra.margin_currency,
+    leverage: parsed.leverage ?? extra.leverage,
+    opened_at: normalizeTradeTimestamp(parsed.opened_at) ?? extra.opened_at,
+    closed_at: normalizeTradeTimestamp(parsed.closed_at) ?? extra.closed_at,
+    close_type: (parsed.close_type ?? extra.close_type)?.slice(0, 80) ?? null,
+    trading_fee: tradingFee,
+    funding_fee: fundingFee,
     setup: parsed.setup?.slice(0, 80) ?? null,
     tags: ["screenshot"],
     notes: parsed.notes?.slice(0, 2000) ?? null,
@@ -150,6 +162,16 @@ export function ScreenshotImport({
                   {row.exit_price ?? "—"} ·{" "}
                   <span className={row.pnl >= 0 ? "text-profit" : "text-loss"}>
                     {formatMoney(row.pnl)}
+                  </span>
+                  <span className="mt-2 grid gap-x-4 gap-y-1 text-lg sm:grid-cols-2">
+                    {row.setup && <strong className="text-gold sm:col-span-2">Setup: {row.setup}</strong>}
+                    {row.margin !== null && <span>Margin: {row.margin} {row.margin_currency}</span>}
+                    {row.leverage !== null && <span>Leverage: {row.leverage}×</span>}
+                    {row.opened_at && <span>Opened: {row.opened_at.replace("T", " ")}</span>}
+                    {row.closed_at && <span>Closed: {row.closed_at.replace("T", " ")}</span>}
+                    {row.close_type && <span>Close type: {row.close_type}</span>}
+                    {row.trading_fee !== null && <span>Trading fee: {row.trading_fee}</span>}
+                    {row.funding_fee !== null && <span>Funding fee: {row.funding_fee}</span>}
                   </span>
                 </span>
               </label>

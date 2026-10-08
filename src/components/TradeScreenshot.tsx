@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImageIcon, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { setTradeScreenshot } from "@/lib/trades.functions";
 import type { Trade } from "@/lib/trades.functions";
+import { Button } from "@/components/ui/button";
 
 const BUCKET = "trade-screenshots";
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -19,6 +20,7 @@ export function TradeScreenshot({
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const save = useServerFn(setTradeScreenshot);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,10 +101,13 @@ export function TradeScreenshot({
         </div>
       )}
       <div className="flex flex-wrap gap-3">
-        <label className={`pixel-btn pixel-btn-ghost cursor-pointer ${busy ? "opacity-50" : ""}`}>
-          <Upload className="mr-2 inline size-4" />
+        <Button variant="pixel" size="pixel-sm" disabled={busy} onClick={() => fileInput.current?.click()}>
+          <Upload />
           {trade.screenshot_url ? "Replace screenshot" : "Upload screenshot"}
+        </Button>
           <input
+            ref={fileInput}
+            aria-label="Trade screenshot"
             type="file"
             accept="image/*"
             className="hidden"
@@ -113,16 +118,16 @@ export function TradeScreenshot({
               e.target.value = "";
             }}
           />
-        </label>
         {trade.screenshot_url && (
-          <button
+          <Button
             type="button"
-            className="pixel-btn pixel-btn-danger"
+            variant="pixel-danger"
+            size="pixel-sm"
             disabled={busy}
             onClick={() => void removeScreenshot()}
           >
-            <Trash2 className="mr-2 inline size-4" /> Remove
-          </button>
+            <Trash2 /> Remove
+          </Button>
         )}
         {!trade.screenshot_url && !busy && (
           <span className="flex items-center gap-2 text-lg text-muted-foreground">

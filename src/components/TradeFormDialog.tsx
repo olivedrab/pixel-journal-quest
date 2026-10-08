@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { createTrade, updateTrade, tradeInputSchema } from "@/lib/trades.functions";
 import type { Trade, TradeInput } from "@/lib/trades.functions";
+import { normalizeTradeTimestamp } from "@/lib/trade-details";
 
 type Draft = {
   trade_date: string;
@@ -15,6 +16,14 @@ type Draft = {
   stop_loss: string;
   target_price: string;
   fees: string;
+  margin: string;
+  margin_currency: string;
+  leverage: string;
+  opened_at: string;
+  closed_at: string;
+  close_type: string;
+  trading_fee: string;
+  funding_fee: string;
   setup: string;
   tags: string;
   notes: string;
@@ -32,6 +41,14 @@ function emptyDraft(date: string): Draft {
     stop_loss: "",
     target_price: "",
     fees: "",
+    margin: "",
+    margin_currency: "",
+    leverage: "",
+    opened_at: "",
+    closed_at: "",
+    close_type: "",
+    trading_fee: "",
+    funding_fee: "",
     setup: "",
     tags: "",
     notes: "",
@@ -56,6 +73,14 @@ export function draftFromTrade(trade: Trade): Draft {
     stop_loss: trade.stop_loss?.toString() ?? "",
     target_price: trade.target_price?.toString() ?? "",
     fees: trade.fees?.toString() ?? "",
+    margin: trade.margin?.toString() ?? "",
+    margin_currency: trade.margin_currency ?? "",
+    leverage: trade.leverage?.toString() ?? "",
+    opened_at: trade.opened_at ?? "",
+    closed_at: trade.closed_at ?? "",
+    close_type: trade.close_type ?? "",
+    trading_fee: trade.trading_fee?.toString() ?? "",
+    funding_fee: trade.funding_fee?.toString() ?? "",
     setup: trade.setup ?? "",
     tags: (trade.tags ?? []).join(", "),
     notes: trade.notes ?? "",
@@ -103,6 +128,14 @@ export function TradeFormDialog({
       stop_loss: num(draft.stop_loss),
       target_price: num(draft.target_price),
       fees: num(draft.fees),
+      margin: num(draft.margin),
+      margin_currency: draft.margin_currency.trim().toUpperCase() || null,
+      leverage: num(draft.leverage),
+      opened_at: normalizeTradeTimestamp(draft.opened_at),
+      closed_at: normalizeTradeTimestamp(draft.closed_at),
+      close_type: draft.close_type.trim() || null,
+      trading_fee: num(draft.trading_fee),
+      funding_fee: num(draft.funding_fee),
       setup: draft.setup.trim() || null,
       tags: draft.tags
         .split(",")
@@ -212,6 +245,33 @@ export function TradeFormDialog({
           </Field>
         </Section>
 
+        <Section title="Execution">
+          <Field label="Margin">
+            <input className="pixel-field" inputMode="decimal" value={draft.margin} onChange={(e) => set("margin", e.target.value)} />
+          </Field>
+          <Field label="Margin currency">
+            <input className="pixel-field" maxLength={12} placeholder="USDT" value={draft.margin_currency} onChange={(e) => set("margin_currency", e.target.value)} />
+          </Field>
+          <Field label="Leverage (×)">
+            <input className="pixel-field" inputMode="decimal" placeholder="2" value={draft.leverage} onChange={(e) => set("leverage", e.target.value)} />
+          </Field>
+          <Field label="Close type">
+            <input className="pixel-field" maxLength={80} placeholder="Triggered TP/SL" value={draft.close_type} onChange={(e) => set("close_type", e.target.value)} />
+          </Field>
+          <Field label="Opened">
+            <input className="pixel-field" type="datetime-local" step="1" value={draft.opened_at} onChange={(e) => set("opened_at", e.target.value)} />
+          </Field>
+          <Field label="Closed">
+            <input className="pixel-field" type="datetime-local" step="1" value={draft.closed_at} onChange={(e) => set("closed_at", e.target.value)} />
+          </Field>
+          <Field label="Trading fee">
+            <input className="pixel-field" inputMode="decimal" value={draft.trading_fee} onChange={(e) => set("trading_fee", e.target.value)} />
+          </Field>
+          <Field label="Funding fee">
+            <input className="pixel-field" inputMode="decimal" value={draft.funding_fee} onChange={(e) => set("funding_fee", e.target.value)} />
+          </Field>
+        </Section>
+
         <Section title="Risk">
           <Field label="Stop loss">
             <input
@@ -232,9 +292,9 @@ export function TradeFormDialog({
         </Section>
 
         <Section title="Journal">
-          <Field label="Setup">
+          <Field label="Setup" emphasized>
             <input
-              className="pixel-field"
+              className="pixel-field border-gold bg-gold/5 text-2xl"
               maxLength={80}
               value={draft.setup}
               placeholder="Breakout retest"
@@ -302,10 +362,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, emphasized = false }: { label: string; children: React.ReactNode; emphasized?: boolean }) {
   return (
     <label className="block">
-      <span className="font-pixel text-[0.55rem] text-muted-foreground">{label}</span>
+      <span className={emphasized ? "font-pixel text-[0.7rem] text-gold" : "font-pixel text-[0.55rem] text-muted-foreground"}>{label}</span>
       <div className="mt-2">{children}</div>
     </label>
   );

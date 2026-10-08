@@ -15,6 +15,14 @@ export const tradeInputSchema = z.object({
   stop_loss: z.number().finite().nullable(),
   target_price: z.number().finite().nullable(),
   fees: z.number().finite().nullable(),
+  margin: z.number().finite().nonnegative().nullable().default(null),
+  margin_currency: z.string().trim().max(12).nullable().default(null),
+  leverage: z.number().finite().positive().nullable().default(null),
+  opened_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/).nullable().default(null),
+  closed_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/).nullable().default(null),
+  close_type: z.string().trim().max(80).nullable().default(null),
+  trading_fee: z.number().finite().nullable().default(null),
+  funding_fee: z.number().finite().nullable().default(null),
   setup: z.string().trim().max(80).nullable(),
   tags: z.array(z.string().trim().max(24)).max(12),
   notes: z.string().trim().max(2000).nullable(),
@@ -184,6 +192,14 @@ const parsedTradeSchema = z.object({
   stop_loss: z.number().nullable().optional(),
   target_price: z.number().nullable().optional(),
   fees: z.number().nullable().optional(),
+  margin: z.number().nullable().optional(),
+  margin_currency: z.string().nullable().optional(),
+  leverage: z.number().nullable().optional(),
+  opened_at: z.string().nullable().optional(),
+  closed_at: z.string().nullable().optional(),
+  close_type: z.string().nullable().optional(),
+  trading_fee: z.number().nullable().optional(),
+  funding_fee: z.number().nullable().optional(),
   setup: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
@@ -209,7 +225,15 @@ export const parseScreenshot = createServerFn({ method: "POST" })
       'Reply with JSON only, shaped {"trades":[{...}]}. Each trade may include ' +
       "trade_date (YYYY-MM-DD), symbol, direction ('long' or 'short'), entry_price, " +
       "exit_price, position_size, pnl (net profit or loss as a number, negative for a loss), " +
-      "stop_loss, target_price, fees, setup, notes. Use null when a value is not visible. " +
+      "stop_loss, target_price, fees, margin, margin_currency, leverage, opened_at, closed_at, " +
+      "close_type, trading_fee, funding_fee, setup, notes. " +
+      "Extract margin as a number and its currency separately (e.g. 105.78 and USDT). " +
+      "Extract leverage as a number (2x means 2). Preserve opened_at and closed_at as " +
+      "YYYY-MM-DDTHH:mm:ss in the exchange's displayed time, without inventing a timezone. " +
+      "Use the closing date for trade_date when available. Keep trading_fee and funding_fee " +
+      "separate; fees is the displayed total fees, or their sum when both are visible. " +
+      "Put these execution details in dedicated fields, not notes. " +
+      "Use null when a value is not visible. " +
       `If no date is visible, use ${data.fallbackDate}. Never invent trades that are not in the image.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
