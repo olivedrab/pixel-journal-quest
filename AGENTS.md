@@ -9,4 +9,5 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- AI-generated trade charts use an authenticated streaming server route so private trade data and the Lovable API key remain server-side.
+- Screenshot extraction runs in an authenticated server function so private trade data and the Lovable API key remain server-side.
+- Trade execution details are nullable columns on trades, with exchange-local timestamp strings and shared normalization, to preserve displayed times without assuming a timezone or breaking existing entries.

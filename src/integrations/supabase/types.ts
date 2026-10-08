@@ -40,13 +40,20 @@ export type Database = {
       }
       trades: {
         Row: {
+          close_type: string | null
+          closed_at: string | null
           created_at: string
           direction: string
           entry_price: number | null
           exit_price: number | null
           fees: number | null
+          funding_fee: number | null
           id: string
+          leverage: number | null
+          margin: number | null
+          margin_currency: string | null
           notes: string | null
+          opened_at: string | null
           pnl: number
           position_size: number | null
           screenshot_url: string | null
@@ -56,17 +63,25 @@ export type Database = {
           tags: string[]
           target_price: number | null
           trade_date: string
+          trading_fee: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          close_type?: string | null
+          closed_at?: string | null
           created_at?: string
           direction?: string
           entry_price?: number | null
           exit_price?: number | null
           fees?: number | null
+          funding_fee?: number | null
           id?: string
+          leverage?: number | null
+          margin?: number | null
+          margin_currency?: string | null
           notes?: string | null
+          opened_at?: string | null
           pnl?: number
           position_size?: number | null
           screenshot_url?: string | null
@@ -76,17 +91,25 @@ export type Database = {
           tags?: string[]
           target_price?: number | null
           trade_date?: string
+          trading_fee?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          close_type?: string | null
+          closed_at?: string | null
           created_at?: string
           direction?: string
           entry_price?: number | null
           exit_price?: number | null
           fees?: number | null
+          funding_fee?: number | null
           id?: string
+          leverage?: number | null
+          margin?: number | null
+          margin_currency?: string | null
           notes?: string | null
+          opened_at?: string | null
           pnl?: number
           position_size?: number | null
           screenshot_url?: string | null
@@ -96,6 +119,7 @@ export type Database = {
           tags?: string[]
           target_price?: number | null
           trade_date?: string
+          trading_fee?: number | null
           updated_at?: string
           user_id?: string
         }

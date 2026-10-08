@@ -19,6 +19,8 @@ import {
 import { TradeFormDialog } from "@/components/TradeFormDialog";
 import { ScreenshotImport } from "@/components/ScreenshotImport";
 import { TradeScreenshot } from "@/components/TradeScreenshot";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/journal")({
   head: () => ({
@@ -238,19 +240,35 @@ function Journal() {
                       {formatMoney(Number(trade.pnl))}
                     </span>
                   </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xl sm:grid-cols-4">
+                  {trade.setup && (
+                    <div className="mt-4 border-l-4 border-gold bg-gold/10 px-3 py-2">
+                      <p className="font-pixel text-[0.65rem] text-gold">Setup</p>
+                      <p className="mt-1 break-words text-2xl font-bold text-foreground">{trade.setup}</p>
+                    </div>
+                  )}
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xl sm:grid-cols-4">
                     <Detail label="Entry" value={trade.entry_price} />
                     <Detail label="Exit" value={trade.exit_price} />
                     <Detail label="Size" value={trade.position_size} />
                     <Detail label="Fees" value={trade.fees} />
                     <Detail label="Stop" value={trade.stop_loss} />
                     <Detail label="Target" value={trade.target_price} />
-                    <Detail label="Setup" value={trade.setup} />
                     <Detail
                       label="Tags"
                       value={trade.tags?.length ? trade.tags.join(", ") : null}
                     />
                   </dl>
+                  {[trade.margin, trade.leverage, trade.opened_at, trade.closed_at, trade.close_type, trade.trading_fee, trade.funding_fee].some((v) => v !== null && v !== undefined) && (
+                    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-xl sm:grid-cols-4">
+                      <Detail label="Margin" value={trade.margin == null ? null : `${trade.margin} ${trade.margin_currency ?? ""}`} />
+                      <Detail label="Leverage" value={trade.leverage == null ? null : `${trade.leverage}×`} />
+                      <Detail label="Trading fee" value={trade.trading_fee} />
+                      <Detail label="Funding fee" value={trade.funding_fee} />
+                      <Detail label="Opened" value={trade.opened_at?.replace("T", " ")} />
+                      <Detail label="Closed" value={trade.closed_at?.replace("T", " ")} />
+                      <Detail label="Close type" value={trade.close_type} />
+                    </dl>
+                  )}
                   {trade.notes && (
                     <p className="mt-3 text-xl text-muted-foreground">{trade.notes}</p>
                   )}
@@ -259,22 +277,22 @@ function Journal() {
                     onChanged={() => void queryClient.invalidateQueries({ queryKey: ["trades"] })}
                   />
                   <div className="mt-4 flex gap-3">
-                    <button
-                      className="pixel-btn pixel-btn-ghost"
+                    <Button
+                      variant="pixel" size="pixel-sm"
                       onClick={() => {
                         setEditing(trade);
                         setFormFor(trade.trade_date);
                       }}
                     >
-                      Edit
-                    </button>
-                    <button
-                      className="pixel-btn pixel-btn-danger"
+                      <Pencil /> Edit
+                    </Button>
+                    <Button
+                      variant="pixel-danger" size="pixel-sm"
                       disabled={deletion.isPending}
                       onClick={() => deletion.mutate(trade.id)}
                     >
-                      Delete
-                    </button>
+                      <Trash2 /> Delete
+                    </Button>
                   </div>
                 </article>
               ))}
@@ -309,9 +327,9 @@ function Journal() {
 
 function Detail({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="font-pixel text-[0.5rem] text-muted-foreground">{label}</dt>
-      <dd>{value === null || value === undefined || value === "" ? "—" : value}</dd>
+      <dd className="break-words">{value === null || value === undefined || value === "" ? "—" : value}</dd>
     </div>
   );
 }
