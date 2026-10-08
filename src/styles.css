@@ -159,7 +159,7 @@
   }
 }
 
-@utility pixel-btn-compact {
+.pixel-btn.pixel-btn-compact {
   font-size: 0.55rem;
   letter-spacing: 0;
   padding: 0.4rem 0.6rem;
