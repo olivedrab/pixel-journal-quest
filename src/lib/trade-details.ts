@@ -31,7 +31,7 @@ export function moveExecutionNotes<T extends { notes: string | null }>(trade: T)
   for (const pattern of patterns) {
     notes = notes.replace(new RegExp(`\\b${pattern}\\s*[;.]?`, "gi"), "");
   }
-  return { ...fields, notes: notes.replace(/[ \t]+/g, " ").replace(/^[\s;.]+|[\s;.]+$/g, "").trim() || null };
+  return { ...fields, notes: notes.replace(/[ \t]+/g, " ").replace(/^[\s;.]+|[\s;]+$/g, "").trim() || null };
 }
 
 export function detailsFromNotes(notes: string | null | undefined) {
