@@ -5,7 +5,7 @@ import { parseScreenshot, createTrades } from "@/lib/trades.functions";
 import type { ParsedTrade, TradeInput } from "@/lib/trades.functions";
 import { Overlay } from "./TradeFormDialog";
 import { formatMoney } from "@/lib/trade-utils";
-import { detailsFromNotes, normalizeTradeTimestamp } from "@/lib/trade-details";
+import { detailsFromNotes, normalizeTradeTimestamp, moveExecutionNotes } from "@/lib/trade-details";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -14,7 +14,7 @@ function normalize(parsed: ParsedTrade, fallbackDate: string): TradeInput {
   const extra = detailsFromNotes(parsed.notes);
   const tradingFee = parsed.trading_fee ?? extra.trading_fee;
   const fundingFee = parsed.funding_fee ?? extra.funding_fee;
-  return {
+  return moveExecutionNotes({
     trade_date: /^\d{4}-\d{2}-\d{2}$/.test(parsed.trade_date ?? "")
       ? (parsed.trade_date as string)
       : fallbackDate,
@@ -38,7 +38,7 @@ function normalize(parsed: ParsedTrade, fallbackDate: string): TradeInput {
     setup: parsed.setup?.slice(0, 80) ?? null,
     tags: ["screenshot"],
     notes: parsed.notes?.slice(0, 2000) ?? null,
-  };
+  });
 }
 
 export function ScreenshotImport({
