@@ -25,6 +25,12 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setLoggedIn(!!data.session));
+  }, []);
+
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-8 px-5 py-16 text-center">
       <p className="font-pixel text-xs text-gold">★ INSERT COIN ★</p>
