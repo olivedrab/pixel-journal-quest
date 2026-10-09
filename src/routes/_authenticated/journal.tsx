@@ -339,6 +339,9 @@ function HeaderLinks() {
   const { data: isAdmin } = useQuery({ queryKey: ["is-admin"], queryFn: fetchIsAdmin });
   return (
     <>
+      <Link to="/summary" className="pixel-btn pixel-btn-ghost">
+        Summary
+      </Link>
       <Link to="/u/$userId" params={{ userId: user.id }} className="pixel-btn pixel-btn-ghost">
         Profile
       </Link>
