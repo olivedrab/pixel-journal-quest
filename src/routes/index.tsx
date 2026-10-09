@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import heroTerminal from "@/assets/hero-terminal.png";
+import pixelCalendar from "@/assets/pixel-calendar.png";
+import pixelScreenshotDrop from "@/assets/pixel-screenshot-drop.png";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -35,19 +38,36 @@ function Landing() {
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-8 px-5 py-16 text-center">
       <p className="font-pixel text-xs text-gold">★ INSERT COIN ★</p>
       <h1 className="pixel-heading text-2xl leading-relaxed text-primary sm:text-4xl">
-        PIXEL P&amp;L
+        PIXEL P&L
       </h1>
+      <img
+        src={heroTerminal}
+        alt="Pixel art trading desk with a CRT monitor showing a rising candlestick chart"
+        width={1536}
+        height={768}
+        className="pixel-panel w-full"
+      />
       <p className="max-w-xl text-2xl text-muted-foreground">
         A retro trading journal. Log entries, exits, risk and notes — then watch every day of
         the month light up green or red on your calendar.
       </p>
-      <div className="pixel-panel scanlines w-full max-w-xl p-6 text-left">
-        <ul className="space-y-3 text-2xl">
-          <li>▸ Calendar with trade count and P&amp;L per day</li>
-          <li>▸ Click a day for the full trade breakdown</li>
-          <li>▸ Manual entry form with risk, tags and notes</li>
-          <li>▸ Drop in a screenshot and let it fill the fields</li>
-        </ul>
+      <div className="grid w-full max-w-3xl items-center gap-8 sm:grid-cols-[1fr_auto]">
+        <div className="pixel-panel scanlines w-full p-6 text-left">
+          <ul className="space-y-3 text-2xl">
+            <li>▸ Calendar with trade count and P&L per day</li>
+            <li>▸ Click a day for the full trade breakdown</li>
+            <li>▸ Manual entry form with risk, tags and notes</li>
+            <li>▸ Drop in a screenshot and let it fill the fields</li>
+          </ul>
+        </div>
+        <img
+          src={pixelCalendar}
+          alt="Pixel art calendar grid with green profit days and red loss days"
+          width={992}
+          height={672}
+          loading="lazy"
+          className="pixel-panel w-64 sm:w-72"
+        />
       </div>
       <Link
         to={loggedIn ? "/journal" : "/auth"}
@@ -55,17 +75,27 @@ function Landing() {
       >
         Press start
       </Link>
-      <section className="pixel-panel scanlines w-full max-w-xl p-6 text-left">
-        <h2 className="font-pixel mb-4 text-sm text-gold">HOW TO PLAY</h2>
-        <ol className="list-decimal space-y-3 pl-6 text-2xl">
-          <li>Create an account or sign in — your journal is private to you.</li>
-          <li>Open your journal and press <span className="text-primary">New trade</span> to log a
-            trade by hand, or drop in a broker screenshot and let the app fill the fields for you.</li>
-          <li>Review the scanned details, tweak anything, and save — duplicates are skipped
-            automatically.</li>
-          <li>Watch the calendar: each day shows your trade count and P&amp;L. Click a day to see
-            the full breakdown, edit entries, or attach screenshots.</li>
-        </ol>
+      <section className="grid w-full max-w-3xl items-center gap-8 sm:grid-cols-[auto_1fr]">
+        <img
+          src={pixelScreenshotDrop}
+          alt="Pixel art screenshot with a candlestick chart dropping into a form"
+          width={768}
+          height={1024}
+          loading="lazy"
+          className="pixel-panel w-48 sm:w-56"
+        />
+        <div className="pixel-panel scanlines w-full p-6 text-left">
+          <h2 className="font-pixel mb-4 text-sm text-gold">HOW TO PLAY</h2>
+          <ol className="list-decimal space-y-3 pl-6 text-2xl">
+            <li>Create an account or sign in — your journal is private to you.</li>
+            <li>Open your journal and press <span className="text-primary">New trade</span> to log a
+              trade by hand, or drop in a broker screenshot and let the app fill the fields for you.</li>
+            <li>Review the scanned details, tweak anything, and save — duplicates are skipped
+              automatically.</li>
+            <li>Watch the calendar: each day shows your trade count and P&L. Click a day to see
+              the full breakdown, edit entries, or attach screenshots.</li>
+          </ol>
+        </div>
       </section>
     </main>
   );
