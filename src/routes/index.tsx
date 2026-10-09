@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import heroTerminal from "@/assets/hero-terminal.png";
+import pixelCalendar from "@/assets/pixel-calendar.png";
+import pixelScreenshotDrop from "@/assets/pixel-screenshot-drop.png";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
