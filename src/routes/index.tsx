@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,6 +25,12 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setLoggedIn(!!data.session));
+  }, []);
+
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-8 px-5 py-16 text-center">
       <p className="font-pixel text-xs text-gold">★ INSERT COIN ★</p>
@@ -41,9 +49,24 @@ function Landing() {
           <li>▸ Drop in a screenshot and let it fill the fields</li>
         </ul>
       </div>
-      <Link to="/auth" className="pixel-btn pixel-btn-primary inline-block">
+      <Link
+        to={loggedIn ? "/journal" : "/auth"}
+        className="pixel-btn pixel-btn-primary inline-block"
+      >
         Press start
       </Link>
+      <section className="pixel-panel scanlines w-full max-w-xl p-6 text-left">
+        <h2 className="font-pixel mb-4 text-sm text-gold">HOW TO PLAY</h2>
+        <ol className="list-decimal space-y-3 pl-6 text-2xl">
+          <li>Create an account or sign in — your journal is private to you.</li>
+          <li>Open your journal and press <span className="text-primary">New trade</span> to log a
+            trade by hand, or drop in a broker screenshot and let the app fill the fields for you.</li>
+          <li>Review the scanned details, tweak anything, and save — duplicates are skipped
+            automatically.</li>
+          <li>Watch the calendar: each day shows your trade count and P&amp;L. Click a day to see
+            the full breakdown, edit entries, or attach screenshots.</li>
+        </ol>
+      </section>
     </main>
   );
 }
