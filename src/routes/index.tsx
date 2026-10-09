@@ -49,9 +49,24 @@ function Landing() {
           <li>▸ Drop in a screenshot and let it fill the fields</li>
         </ul>
       </div>
-      <Link to="/auth" className="pixel-btn pixel-btn-primary inline-block">
+      <Link
+        to={loggedIn ? "/journal" : "/auth"}
+        className="pixel-btn pixel-btn-primary inline-block"
+      >
         Press start
       </Link>
+      <section className="pixel-panel scanlines w-full max-w-xl p-6 text-left">
+        <h2 className="font-pixel mb-4 text-sm text-gold">HOW TO PLAY</h2>
+        <ol className="list-decimal space-y-3 pl-6 text-2xl">
+          <li>Create an account or sign in — your journal is private to you.</li>
+          <li>Open your journal and press <span className="text-primary">New trade</span> to log a
+            trade by hand, or drop in a broker screenshot and let the app fill the fields for you.</li>
+          <li>Review the scanned details, tweak anything, and save — duplicates are skipped
+            automatically.</li>
+          <li>Watch the calendar: each day shows your trade count and P&amp;L. Click a day to see
+            the full breakdown, edit entries, or attach screenshots.</li>
+        </ol>
+      </section>
     </main>
   );
 }
