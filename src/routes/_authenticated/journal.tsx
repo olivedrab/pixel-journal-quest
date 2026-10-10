@@ -339,6 +339,9 @@ function HeaderLinks() {
   const { data: isAdmin } = useQuery({ queryKey: ["is-admin"], queryFn: fetchIsAdmin });
   return (
     <>
+      <Link to="/backtest" className="pixel-btn pixel-btn-ghost">
+        Backtest
+      </Link>
       <Link to="/summary" className="pixel-btn pixel-btn-ghost">
         Summary
       </Link>

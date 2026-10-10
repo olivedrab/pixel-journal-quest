@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { parseScreenshot, createTrades } from "@/lib/trades.functions";
 import type { ParsedTrade, TradeInput } from "@/lib/trades.functions";
+import { createBacktests } from "@/lib/backtests.functions";
 import { Overlay } from "./TradeFormDialog";
 import { formatMoney } from "@/lib/trade-utils";
 import { detailsFromNotes, normalizeTradeTimestamp, moveExecutionNotes } from "@/lib/trade-details";
@@ -43,10 +44,13 @@ function normalize(parsed: ParsedTrade, fallbackDate: string): TradeInput {
 
 export function ScreenshotImport({
   fallbackDate,
+  target = "live",
   onClose,
   onImported,
 }: {
   fallbackDate: string;
+  /** "live" imports into the trade journal; "backtest" into the backtest log. */
+  target?: "live" | "backtest";
   onClose: () => void;
   onImported: () => void;
 }) {
@@ -55,7 +59,7 @@ export function ScreenshotImport({
   const [rows, setRows] = useState<TradeInput[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const parse = useServerFn(parseScreenshot);
-  const insert = useServerFn(createTrades);
+  const insert = useServerFn(target === "backtest" ? createBacktests : createTrades);
 
   async function handleFile(file: File) {
     if (file.size > MAX_BYTES) {
