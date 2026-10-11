@@ -83,6 +83,9 @@ function Summary() {
           <Link to="/journal" className="pixel-btn pixel-btn-ghost">
             Journal
           </Link>
+          <Link to="/backtest" className="pixel-btn pixel-btn-ghost">
+            Backtest
+          </Link>
         </div>
       </header>
 

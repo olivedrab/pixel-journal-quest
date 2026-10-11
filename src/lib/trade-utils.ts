@@ -35,7 +35,7 @@ export function groupByDay(trades: Trade[]) {
   return map;
 }
 
-export function sumPnl(trades: Trade[]) {
+export function sumPnl(trades: { pnl: number | null }[]) {
   return trades.reduce((total, t) => total + Number(t.pnl ?? 0), 0);
 }
 

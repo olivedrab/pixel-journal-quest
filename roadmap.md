@@ -7,3 +7,4 @@
 - [x] Store scanned margin, leverage, opening/closing times, close type, and separate fees as fields.
 - [x] Verify trade editing and screenshot scanning with the new fields.
 - [x] Summary page: trades grouped by symbol with P&L, win rate, average duration.
+- [x] Backtesting journal: flat list, P&L stats, screenshot import.
