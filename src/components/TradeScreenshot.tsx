@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { setTradeScreenshot } from "@/lib/trades.functions";
-import type { Trade } from "@/lib/trades.functions";
+import { setBacktestScreenshot } from "@/lib/backtests.functions";
 import { Button } from "@/components/ui/button";
 
 const BUCKET = "trade-screenshots";
@@ -13,13 +13,15 @@ const MAX_BYTES = 8 * 1024 * 1024;
 export function TradeScreenshot({
   trade,
   onChanged,
+  target = "live",
 }: {
-  trade: Trade;
+  trade: { id: string; symbol: string; screenshot_url: string | null };
+  target?: "live" | "backtest";
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
-  const save = useServerFn(setTradeScreenshot);
+  const save = useServerFn(target === "backtest" ? setBacktestScreenshot : setTradeScreenshot);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,7 +46,9 @@ export function TradeScreenshot({
       toast.error("That image is larger than 8 MB.");
       return;
     }
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) { toast.error("Choose a PNG, JPG or WebP image."); return; }
     setBusy(true);
+    let uploadedPath: string | null = null;
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
@@ -55,13 +59,14 @@ export function TradeScreenshot({
         .from(BUCKET)
         .upload(path, file, { contentType: file.type, upsert: false });
       if (uploadError) throw new Error(uploadError.message);
-      if (trade.screenshot_url) {
-        await supabase.storage.from(BUCKET).remove([trade.screenshot_url]);
-      }
+      uploadedPath = path;
       await save({ data: { id: trade.id, screenshotUrl: path } });
+      uploadedPath = null;
+      if (trade.screenshot_url) await supabase.storage.from(BUCKET).remove([trade.screenshot_url]);
       toast.success("Screenshot saved.");
       onChanged();
     } catch (error) {
+      if (uploadedPath) await supabase.storage.from(BUCKET).remove([uploadedPath]);
       toast.error(error instanceof Error ? error.message : "Could not upload the screenshot.");
     } finally {
       setBusy(false);
@@ -72,8 +77,8 @@ export function TradeScreenshot({
     if (!trade.screenshot_url) return;
     setBusy(true);
     try {
-      await supabase.storage.from(BUCKET).remove([trade.screenshot_url]);
       await save({ data: { id: trade.id, screenshotUrl: null } });
+      await supabase.storage.from(BUCKET).remove([trade.screenshot_url]);
       toast.success("Screenshot removed.");
       onChanged();
     } catch (error) {
