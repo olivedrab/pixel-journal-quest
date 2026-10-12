@@ -30,8 +30,11 @@ export type Database = {
           margin_currency: string | null
           notes: string | null
           opened_at: string | null
+          outcome: string
           pnl: number
           position_size: number | null
+          rules: Json
+          screenshot_url: string | null
           setup: string | null
           stop_loss: number | null
           symbol: string
@@ -57,8 +60,11 @@ export type Database = {
           margin_currency?: string | null
           notes?: string | null
           opened_at?: string | null
+          outcome?: string
           pnl?: number
           position_size?: number | null
+          rules?: Json
+          screenshot_url?: string | null
           setup?: string | null
           stop_loss?: number | null
           symbol: string
@@ -84,8 +90,11 @@ export type Database = {
           margin_currency?: string | null
           notes?: string | null
           opened_at?: string | null
+          outcome?: string
           pnl?: number
           position_size?: number | null
+          rules?: Json
+          screenshot_url?: string | null
           setup?: string | null
           stop_loss?: number | null
           symbol?: string
