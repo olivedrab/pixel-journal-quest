@@ -15,6 +15,13 @@
       "when": 1791604620564,
       "tag": "0001_create_backtests",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791806616323,
+      "tag": "0002_backtest_reviews_and_screenshots",
+      "breakpoints": true
     }
   ]
 }

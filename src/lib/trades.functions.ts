@@ -203,6 +203,7 @@ const parsedTradeSchema = z.object({
   funding_fee: z.number().nullable().optional(),
   setup: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  outcome: z.enum(["pending", "won", "lost"]).optional(),
 });
 
 export type ParsedTrade = z.infer<typeof parsedTradeSchema>;
@@ -214,6 +215,7 @@ export const parseScreenshot = createServerFn({ method: "POST" })
       .object({
         image: z.string().startsWith("data:image/").max(12_000_000),
         fallbackDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        target: z.enum(["live", "backtest"]).default("live"),
       })
       .parse(data),
   )
@@ -221,7 +223,12 @@ export const parseScreenshot = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this project.");
 
-    const instructions =
+    const instructions = data.target === "backtest" ?
+      "Extract the single selected long/short position from this backtesting chart. Return JSON {trades:[{trade_date,symbol,direction,entry_price,target_price,stop_loss,setup,outcome}]}. " +
+      "Read absolute ENTRY, TARGET and STOP prices from the right axis or position boundaries; Target/Stop label distances are not absolute prices. Never treat Closed PnL as monetary profit. " +
+      "Outcome is won only if subsequent candles visibly reach target before stop, lost if stop is reached first, pending if neither hit or order ambiguous. The position box alone does not prove a hit. " +
+      "Closed PnL matching target/stop distance can corroborate a clearly visible hit. Never invent a symbol or setup, use null if not shown. No explanatory summary or notes. " +
+      `Use date YYYY-MM-DD from chart, or ${data.fallbackDate} if unavailable.` :
       "You read screenshots from trading platforms and extract closed trades. " +
       'Reply with JSON only, shaped {"trades":[{...}]}. Each trade may include ' +
       "trade_date (YYYY-MM-DD), symbol, direction ('long' or 'short'), entry_price, " +
@@ -261,24 +268,39 @@ export const parseScreenshot = createServerFn({ method: "POST" })
             ],
           },
         ],
-        reasoning: { effort: "low" },
-        text: { format: { type: "json_object" } },
+        reasoning: { effort: "low", summary: "auto" },
+        include: ["reasoning.encrypted_content"],
+        text: { format: data.target === "backtest" ? {
+          type: "json_schema", name: "backtest_chart", strict: true,
+          schema: { type: "object", additionalProperties: false, required: ["trades"], properties: {
+            trades: { type: "array", items: { type: "object", additionalProperties: false,
+              required: ["trade_date", "symbol", "direction", "entry_price", "target_price", "stop_loss", "setup", "outcome"],
+              properties: {
+                trade_date: { type: ["string", "null"] }, symbol: { type: ["string", "null"] },
+                direction: { type: "string", enum: ["long", "short"] },
+                entry_price: { type: ["number", "null"] }, target_price: { type: ["number", "null"] },
+                stop_loss: { type: ["number", "null"] }, setup: { type: ["string", "null"] },
+                outcome: { type: "string", enum: ["pending", "won", "lost"] },
+              } } },
+          } },
+        } : { type: "json_object" } },
         store: false,
         stream: true,
       }),
     });
 
-    if (response.status === 429) throw new Error("AI rate limit reached — try again shortly.");
-    if (response.status === 402) throw new Error("AI credits exhausted for this workspace.");
-    if (!response.ok || !response.body) {
-      throw new Error("Could not read the screenshot. Try a clearer image.");
+    if (!response.ok) {
+      const failure = await response.json().catch(() => ({})) as { message?: string; error?: { message?: string } };
+      throw new Error(failure.message ?? failure.error?.message ?? `Screenshot analysis failed (${response.status}).`);
     }
+    if (!response.body) throw new Error("Screenshot analysis returned no response.");
 
     // Consume the SSE stream and collect the model's text output.
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     let raw = "";
+    let terminalError: string | null = null;
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -290,7 +312,8 @@ export const parseScreenshot = createServerFn({ method: "POST" })
         const payload = line.slice(5).trim();
         if (!payload || payload === "[DONE]") continue;
         try {
-          const event = JSON.parse(payload) as { type?: string; delta?: string; text?: string };
+          const event = JSON.parse(payload) as { type?: string; delta?: string; text?: string; error?: { message?: string }; message?: string };
+          if (event.type === "response.refusal.delta" || event.type === "response.refusal.done" || event.type === "error" || event.type === "response.failed") terminalError = event.error?.message ?? event.message ?? event.delta ?? "Screenshot analysis was declined or failed.";
           if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
             raw += event.delta;
           } else if (event.type === "response.output_text.done" && typeof event.text === "string") {
@@ -302,6 +325,8 @@ export const parseScreenshot = createServerFn({ method: "POST" })
       }
     }
 
+    if (terminalError) throw new Error(terminalError);
+    if (!raw.trim()) throw new Error("Screenshot analysis returned no readable results.");
     let parsedJson: unknown;
     try {
       parsedJson = JSON.parse(raw);
