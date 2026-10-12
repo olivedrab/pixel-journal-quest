@@ -1,352 +1,124 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
+import { Plus, Trash2, Upload, Save } from "lucide-react";
 import { createBacktest, updateBacktest } from "@/lib/backtests.functions";
 import type { Backtest } from "@/lib/backtests.functions";
-import { tradeInputSchema } from "@/lib/trades.functions";
-import type { TradeInput } from "@/lib/trades.functions";
-import { normalizeTradeTimestamp } from "@/lib/trade-details";
+import { backtestInputSchema, OUTCOME_LABELS } from "@/lib/backtest-input";
+import type { BacktestInput } from "@/lib/backtest-input";
+import { parseScreenshot } from "@/lib/trades.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Overlay } from "./TradeFormDialog";
 
-type Draft = {
-  trade_date: string;
-  symbol: string;
-  direction: "long" | "short";
-  entry_price: string;
-  exit_price: string;
-  position_size: string;
-  pnl: string;
-  stop_loss: string;
-  target_price: string;
-  fees: string;
-  margin: string;
-  margin_currency: string;
-  leverage: string;
-  opened_at: string;
-  closed_at: string;
-  close_type: string;
-  trading_fee: string;
-  funding_fee: string;
-  setup: string;
-  tags: string;
-  notes: string;
-};
-
-function emptyDraft(date: string): Draft {
-  return {
-    trade_date: date,
-    symbol: "",
-    direction: "long",
-    entry_price: "",
-    exit_price: "",
-    position_size: "",
-    pnl: "",
-    stop_loss: "",
-    target_price: "",
-    fees: "",
-    margin: "",
-    margin_currency: "",
-    leverage: "",
-    opened_at: "",
-    closed_at: "",
-    close_type: "",
-    trading_fee: "",
-    funding_fee: "",
-    setup: "",
-    tags: "",
-    notes: "",
-  };
-}
-
-function num(value: string) {
-  if (value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function draftFromBacktest(entry: Backtest): Draft {
-  return {
-    trade_date: entry.trade_date,
-    symbol: entry.symbol,
-    direction: entry.direction,
-    entry_price: entry.entry_price?.toString() ?? "",
-    exit_price: entry.exit_price?.toString() ?? "",
-    position_size: entry.position_size?.toString() ?? "",
-    pnl: entry.pnl?.toString() ?? "",
-    stop_loss: entry.stop_loss?.toString() ?? "",
-    target_price: entry.target_price?.toString() ?? "",
-    fees: entry.fees?.toString() ?? "",
-    margin: entry.margin?.toString() ?? "",
-    margin_currency: entry.margin_currency ?? "",
-    leverage: entry.leverage?.toString() ?? "",
-    opened_at: entry.opened_at ?? "",
-    closed_at: entry.closed_at ?? "",
-    close_type: entry.close_type ?? "",
-    trading_fee: entry.trading_fee?.toString() ?? "",
-    funding_fee: entry.funding_fee?.toString() ?? "",
-    setup: entry.setup ?? "",
-    tags: (entry.tags ?? []).join(", "),
-    notes: entry.notes ?? "",
-  };
-}
-
-export function BacktestFormDialog({
-  date,
-  editing,
-  onClose,
-  onSaved,
-}: {
-  date: string;
-  editing?: Backtest | null;
-  onClose: () => void;
-  onSaved: () => void;
+export function BacktestFormDialog({ date, editing, scan = false, onClose, onSaved }: {
+  date: string; editing?: Backtest | null; scan?: boolean; onClose: () => void; onSaved: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(() =>
-    editing ? draftFromBacktest(editing) : emptyDraft(date),
-  );
+  const [draft, setDraft] = useState<BacktestInput>(() => editing ?? {
+    trade_date: date, symbol: "", direction: "long", entry_price: null, target_price: null,
+    stop_loss: null, setup: null, outcome: "pending", notes: null, rules: [], screenshot_url: null,
+  });
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [rule, setRule] = useState("");
   const create = useServerFn(createBacktest);
   const update = useServerFn(updateBacktest);
-
-  useEffect(() => {
-    setDraft(editing ? draftFromBacktest(editing) : emptyDraft(date));
-  }, [editing, date]);
-
-  function set<K extends keyof Draft>(key: K, value: Draft[K]) {
-    setDraft((prev) => ({ ...prev, [key]: value }));
+  const parse = useServerFn(parseScreenshot);
+  function set<K extends keyof BacktestInput>(key: K, value: BacktestInput[K]) {
+    setDraft(prev => ({ ...prev, [key]: value }));
   }
-
+  async function chooseImage(file: File) {
+    if (file.size > 8 * 1024 * 1024) { toast.error("That image is larger than 8 MB."); return; }
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) { toast.error("Choose a PNG, JPG or WebP image."); return; }
+    setReading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Could not read the image."));
+        reader.readAsDataURL(file);
+      });
+      setImage(file); setPreview(dataUrl);
+      const result = await parse({ data: { image: dataUrl, fallbackDate: draft.trade_date, target: "backtest" } });
+      const row = result.trades[0];
+      if (!row) throw new Error("No readable position found in this chart.");
+      setDraft(prev => ({ ...prev,
+        trade_date: row.trade_date ?? prev.trade_date,
+        symbol: row.symbol?.trim().toUpperCase() ?? prev.symbol,
+        direction: row.direction === "short" ? "short" : "long",
+        entry_price: row.entry_price ?? null, target_price: row.target_price ?? null,
+        stop_loss: row.stop_loss ?? null, setup: row.setup ?? prev.setup, outcome: row.outcome ?? "pending",
+      }));
+      toast.success("Chart read. Review the price levels and result.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not read the screenshot."); }
+    finally { setReading(false); }
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const values: TradeInput = {
-      trade_date: draft.trade_date,
-      symbol: draft.symbol.trim().toUpperCase(),
-      direction: draft.direction,
-      entry_price: num(draft.entry_price),
-      exit_price: num(draft.exit_price),
-      position_size: num(draft.position_size),
-      pnl: num(draft.pnl) ?? 0,
-      stop_loss: num(draft.stop_loss),
-      target_price: num(draft.target_price),
-      fees: num(draft.fees),
-      margin: num(draft.margin),
-      margin_currency: draft.margin_currency.trim().toUpperCase() || null,
-      leverage: num(draft.leverage),
-      opened_at: normalizeTradeTimestamp(draft.opened_at),
-      closed_at: normalizeTradeTimestamp(draft.closed_at),
-      close_type: draft.close_type.trim() || null,
-      trading_fee: num(draft.trading_fee),
-      funding_fee: num(draft.funding_fee),
-      setup: draft.setup.trim() || null,
-      tags: draft.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .slice(0, 12),
-      notes: draft.notes.trim() || null,
-    };
-    const parsed = tradeInputSchema.safeParse(values);
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Check the values you entered.");
-      return;
-    }
+    const parsed = backtestInputSchema.safeParse(draft);
+    if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Check your entries."); return; }
     setBusy(true);
+    let uploaded: string | null = null;
     try {
-      if (editing) {
-        await update({ data: { id: editing.id, values: parsed.data } });
-        toast.success("Backtest updated.");
-      } else {
-        await create({ data: parsed.data });
-        toast.success("Backtest logged.");
+      const values = parsed.data;
+      if (image) {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user) throw new Error("Please sign in again to save the screenshot.");
+        const extension = image.type === "image/jpeg" ? "jpg" : image.type === "image/webp" ? "webp" : "png";
+        const path = `${data.user.id}/backtests/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from("trade-screenshots").upload(path, image, { contentType: image.type });
+        if (uploadError) throw new Error(uploadError.message);
+        uploaded = path; values.screenshot_url = path;
       }
-      onSaved();
-      onClose();
+      if (editing) await update({ data: { id: editing.id, values } });
+      else await create({ data: values });
+      uploaded = null;
+      if (image && editing?.screenshot_url) await supabase.storage.from("trade-screenshots").remove([editing.screenshot_url]);
+      toast.success(editing ? "Backtest updated." : "Backtest saved."); onSaved(); onClose();
     } catch (error) {
+      if (uploaded) await supabase.storage.from("trade-screenshots").remove([uploaded]);
       toast.error(error instanceof Error ? error.message : "Could not save the backtest.");
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
-
-  return (
-    <Overlay onClose={onClose}>
-      <form onSubmit={submit} className="space-y-5">
-        <h2 className="pixel-heading text-sm text-primary">
-          {editing ? "Edit backtest" : "New backtest"}
-        </h2>
-
-        <Section title="Trade">
-          <Field label="Date">
-            <input
-              type="date"
-              className="pixel-field"
-              value={draft.trade_date}
-              onChange={(e) => set("trade_date", e.target.value)}
-            />
-          </Field>
-          <Field label="Symbol">
-            <input
-              className="pixel-field"
-              value={draft.symbol}
-              maxLength={24}
-              placeholder="BTCUSD"
-              onChange={(e) => set("symbol", e.target.value)}
-            />
-          </Field>
-          <Field label="Direction">
-            <select
-              className="pixel-field"
-              value={draft.direction}
-              onChange={(e) => set("direction", e.target.value as "long" | "short")}
-            >
-              <option value="long">Long</option>
-              <option value="short">Short</option>
-            </select>
-          </Field>
-          <Field label="Size">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              value={draft.position_size}
-              onChange={(e) => set("position_size", e.target.value)}
-            />
-          </Field>
-          <Field label="Entry">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              value={draft.entry_price}
-              onChange={(e) => set("entry_price", e.target.value)}
-            />
-          </Field>
-          <Field label="Exit">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              value={draft.exit_price}
-              onChange={(e) => set("exit_price", e.target.value)}
-            />
-          </Field>
-          <Field label="Profit / loss">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              placeholder="-120.50"
-              value={draft.pnl}
-              onChange={(e) => set("pnl", e.target.value)}
-            />
-          </Field>
-          <Field label="Fees">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              value={draft.fees}
-              onChange={(e) => set("fees", e.target.value)}
-            />
-          </Field>
-        </Section>
-
-        <Section title="Execution">
-          <Field label="Margin">
-            <input className="pixel-field" inputMode="decimal" value={draft.margin} onChange={(e) => set("margin", e.target.value)} />
-          </Field>
-          <Field label="Margin currency">
-            <input className="pixel-field" maxLength={12} placeholder="USDT" value={draft.margin_currency} onChange={(e) => set("margin_currency", e.target.value)} />
-          </Field>
-          <Field label="Leverage (×)">
-            <input className="pixel-field" inputMode="decimal" placeholder="2" value={draft.leverage} onChange={(e) => set("leverage", e.target.value)} />
-          </Field>
-          <Field label="Close type">
-            <input className="pixel-field" maxLength={80} placeholder="Triggered TP/SL" value={draft.close_type} onChange={(e) => set("close_type", e.target.value)} />
-          </Field>
-          <Field label="Opened">
-            <input className="pixel-field" type="datetime-local" step="1" value={draft.opened_at} onChange={(e) => set("opened_at", e.target.value)} />
-          </Field>
-          <Field label="Closed">
-            <input className="pixel-field" type="datetime-local" step="1" value={draft.closed_at} onChange={(e) => set("closed_at", e.target.value)} />
-          </Field>
-          <Field label="Trading fee">
-            <input className="pixel-field" inputMode="decimal" value={draft.trading_fee} onChange={(e) => set("trading_fee", e.target.value)} />
-          </Field>
-          <Field label="Funding fee">
-            <input className="pixel-field" inputMode="decimal" value={draft.funding_fee} onChange={(e) => set("funding_fee", e.target.value)} />
-          </Field>
-        </Section>
-
-        <Section title="Risk">
-          <Field label="Stop loss">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              value={draft.stop_loss}
-              onChange={(e) => set("stop_loss", e.target.value)}
-            />
-          </Field>
-          <Field label="Target">
-            <input
-              className="pixel-field"
-              inputMode="decimal"
-              value={draft.target_price}
-              onChange={(e) => set("target_price", e.target.value)}
-            />
-          </Field>
-        </Section>
-
-        <Section title="Journal">
-          <Field label="Setup" emphasized>
-            <input
-              className="pixel-field border-gold bg-gold/5 text-2xl"
-              maxLength={80}
-              value={draft.setup}
-              placeholder="Breakout retest"
-              onChange={(e) => set("setup", e.target.value)}
-            />
-          </Field>
-          <Field label="Tags (comma separated)">
-            <input
-              className="pixel-field"
-              value={draft.tags}
-              placeholder="london, news"
-              onChange={(e) => set("tags", e.target.value)}
-            />
-          </Field>
-        </Section>
-        <Field label="Notes">
-          <textarea
-            className="pixel-field min-h-24"
-            maxLength={2000}
-            value={draft.notes}
-            onChange={(e) => set("notes", e.target.value)}
-          />
-        </Field>
-
-        <div className="flex flex-wrap gap-3">
-          <button type="submit" disabled={busy} className="pixel-btn pixel-btn-primary">
-            {busy ? "Saving…" : "Save backtest"}
-          </button>
-          <button type="button" onClick={onClose} className="pixel-btn pixel-btn-ghost">
-            Cancel
-          </button>
+  function addRule() {
+    if (!rule.trim() || draft.rules.length >= 30) return;
+    set("rules", [...draft.rules, { label: rule.trim(), checked: false }]); setRule("");
+  }
+  return <Overlay onClose={busy || reading ? () => {} : onClose}>
+    <form onSubmit={submit} className="space-y-5">
+      <h2 className="pixel-heading text-sm text-primary">{editing ? "Edit backtest" : scan ? "Scan backtest" : "New backtest"}</h2>
+      <fieldset disabled={busy || reading} className="space-y-5">
+        <label className="block cursor-pointer border border-border p-4">
+          <span className="flex items-center gap-2 font-pixel text-[0.6rem] text-gold"><Upload className="size-4" /> {preview ? "Replace chart" : "Choose chart screenshot"}</span>
+          <input aria-label="Backtest screenshot" type="file" accept="image/png,image/jpeg,image/webp" className="mt-3 block w-full text-lg" onChange={e => { const file = e.target.files?.[0]; if (file) void chooseImage(file); e.target.value = ""; }} />
+          {preview && <img src={preview} alt="Backtest chart preview" className="mx-auto mt-3 max-h-64 object-contain" />}
+        </label>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Date"><input type="date" className="pixel-field" value={draft.trade_date} onChange={e => set("trade_date", e.target.value)} required /></Field>
+          <Field label="Symbol"><input className="pixel-field" maxLength={24} value={draft.symbol} onChange={e => set("symbol", e.target.value)} required /></Field>
+          <Field label="Direction"><select className="pixel-field" value={draft.direction} onChange={e => set("direction", e.target.value === "short" ? "short" : "long")}><option value="long">Long</option><option value="short">Short</option></select></Field>
         </div>
-      </form>
-    </Overlay>
-  );
+        <div className="grid gap-4 sm:grid-cols-3">{([ ["entry_price", "Entry"], ["target_price", "Target"], ["stop_loss", "Stop loss"] ] as const).map(([key, label]) =>
+          <Field key={key} label={label}><input type="number" step="any" className="pixel-field" value={draft[key] ?? ""} onChange={e => set(key, e.target.value === "" ? null : Number(e.target.value))} /></Field>)}</div>
+        <Field label="Setup" emphasized><input className="pixel-field border-gold bg-gold/5 text-2xl" maxLength={80} value={draft.setup ?? ""} onChange={e => set("setup", e.target.value || null)} /></Field>
+        <Field label="Result"><select className="pixel-field" value={draft.outcome} onChange={e => set("outcome", e.target.value === "won" ? "won" : e.target.value === "lost" ? "lost" : "pending")}>{Object.entries(OUTCOME_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+        <Field label="Notes"><textarea className="pixel-field min-h-28" maxLength={2000} placeholder="Why did this trade win or lose?" value={draft.notes ?? ""} onChange={e => set("notes", e.target.value || null)} /></Field>
+        <section className="space-y-3 border-t border-border pt-4">
+          <h3 className="font-pixel text-[0.65rem] text-gold">Trading rules</h3>
+          {draft.rules.map((item, i) => <div key={i} className="flex items-center gap-3">
+            <label className="flex min-w-0 flex-1 items-center gap-3 text-xl"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={item.checked} onChange={e => set("rules", draft.rules.map((r, n) => n === i ? { ...r, checked: e.target.checked } : r))} /><span className="break-words">{item.label}</span></label>
+            <Button type="button" variant="pixel-danger" size="pixel-sm" aria-label={`Remove rule ${i + 1}`} title="Remove rule" onClick={() => set("rules", draft.rules.filter((_, n) => n !== i))}><Trash2 /></Button>
+          </div>)}
+          <div className="flex gap-2"><input aria-label="New trading rule" className="pixel-field min-w-0 flex-1" maxLength={160} value={rule} onChange={e => setRule(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRule(); } }} placeholder="Add your trading rule" /><Button type="button" variant="pixel" size="pixel-sm" aria-label="Add rule" title="Add rule" disabled={!rule.trim() || draft.rules.length >= 30} onClick={addRule}><Plus /></Button></div>
+        </section>
+      </fieldset>
+      {reading && <p role="status" className="blink font-pixel text-[0.6rem] text-primary">Reading chart…</p>}
+      <div className="flex gap-3"><Button type="submit" variant="pixel" className="pixel-btn-primary" disabled={busy || reading}><Save />{busy ? "Saving…" : "Save backtest"}</Button><Button type="button" variant="pixel" disabled={busy || reading} onClick={onClose}>Cancel</Button></div>
+    </form>
+  </Overlay>;
 }
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="pixel-inset p-4">
-      <legend className="font-pixel text-[0.6rem] text-gold">{title}</legend>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
-    </fieldset>
-  );
-}
-
 function Field({ label, children, emphasized = false }: { label: string; children: React.ReactNode; emphasized?: boolean }) {
-  return (
-    <label className="block">
-      <span className={emphasized ? "font-pixel text-[0.7rem] text-gold" : "font-pixel text-[0.55rem] text-muted-foreground"}>{label}</span>
-      <div className="mt-2">{children}</div>
-    </label>
-  );
+  return <label className="block"><span className={`font-pixel ${emphasized ? "text-[0.7rem] text-gold" : "text-[0.55rem] text-muted-foreground"}`}>{label}</span><div className="mt-2">{children}</div></label>;
 }
