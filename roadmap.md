@@ -8,6 +8,6 @@
 - [x] Verify trade editing and screenshot scanning with the new fields.
 - [x] Summary page: trades grouped by symbol with P&L, win rate, average duration.
 - [x] Backtesting journal: flat list, P&L stats, screenshot import.
-- [ ] Simplify backtests to price levels, setup, outcome, personal notes and customizable rule checklists.
-- [ ] Retain backtest screenshots during scan/import and support review, replacement and removal.
-- [ ] Verify screenshot analysis, saving, editing and persistence end to end.
+- [x] Simplify backtests to price levels, setup, outcome, personal notes and customizable rule checklists.
+- [x] Retain backtest screenshots during scan/import and support review, replacement and removal.
+- [x] Verify screenshot analysis, saving, editing and persistence end to end.
