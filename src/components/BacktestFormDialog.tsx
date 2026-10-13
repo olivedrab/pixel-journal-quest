@@ -103,8 +103,8 @@ export function BacktestFormDialog({ date, editing, scan = false, onClose, onSav
         <div className="grid gap-4 sm:grid-cols-3">{([ ["entry_price", "Entry"], ["target_price", "Target"], ["stop_loss", "Stop loss"] ] as const).map(([key, label]) =>
           <Field key={key} label={label}><input type="number" step="any" className="pixel-field" value={draft[key] ?? ""} onChange={e => set(key, e.target.value === "" ? null : Number(e.target.value))} /></Field>)}</div>
         <Field label="Setup" emphasized><input className="pixel-field border-gold bg-gold/5 text-2xl" maxLength={80} value={draft.setup ?? ""} onChange={e => set("setup", e.target.value || null)} /></Field>
-        <Field label="Result"><select className="pixel-field" value={draft.outcome} onChange={e => set("outcome", e.target.value === "won" ? "won" : e.target.value === "lost" ? "lost" : "pending")}>{Object.entries(OUTCOME_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-        <Field label="Notes"><textarea className="pixel-field min-h-28" maxLength={2000} placeholder="Why did this trade win or lose?" value={draft.notes ?? ""} onChange={e => set("notes", e.target.value || null)} /></Field>
+        <Field label="Result"><select aria-label="Result" className="pixel-field" value={draft.outcome} onChange={e => set("outcome", e.target.value === "won" ? "won" : e.target.value === "lost" ? "lost" : "pending")}>{Object.entries(OUTCOME_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+        <Field label="Notes"><textarea aria-label="Notes" className="pixel-field min-h-28" maxLength={2000} placeholder="Why did this trade win or lose?" value={draft.notes ?? ""} onChange={e => set("notes", e.target.value || null)} /></Field>
         <section className="space-y-3 border-t border-border pt-4">
           <h3 className="font-pixel text-[0.65rem] text-gold">Trading rules</h3>
           {draft.rules.map((item, i) => <div key={i} className="flex items-center gap-3">
