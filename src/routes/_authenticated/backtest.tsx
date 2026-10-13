@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { listBacktests, deleteBacktest } from "@/lib/backtests.functions";
+import { listBacktests, deleteBacktest, listBacktestRuleTemplates, saveBacktestRuleTemplates } from "@/lib/backtests.functions";
 import type { Backtest } from "@/lib/backtests.functions";
 import { OUTCOME_LABELS } from "@/lib/backtest-input";
 import { toISODate } from "@/lib/trade-utils";
 import { BacktestFormDialog } from "@/components/BacktestFormDialog";
 import { TradeScreenshot } from "@/components/TradeScreenshot";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, ScanLine, Check, X } from "lucide-react";
+import { Pencil, Trash2, Plus, ScanLine, Check, X, Save, ListChecks } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/backtest")({
   head: () => ({ meta: [
