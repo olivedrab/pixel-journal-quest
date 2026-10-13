@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { listBacktests, deleteBacktest } from "@/lib/backtests.functions";
+import { listBacktests, deleteBacktest, listBacktestRuleTemplates, saveBacktestRuleTemplates } from "@/lib/backtests.functions";
 import type { Backtest } from "@/lib/backtests.functions";
 import { OUTCOME_LABELS } from "@/lib/backtest-input";
 import { toISODate } from "@/lib/trade-utils";
 import { BacktestFormDialog } from "@/components/BacktestFormDialog";
 import { TradeScreenshot } from "@/components/TradeScreenshot";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, ScanLine, Check, X } from "lucide-react";
+import { Pencil, Trash2, Plus, ScanLine, Check, X, Save, ListChecks } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/backtest")({
   head: () => ({ meta: [
@@ -27,9 +27,13 @@ function BacktestPage() {
   const [editing, setEditing] = useState<Backtest | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [symbolFilter, setSymbolFilter] = useState("");
+  const [tab, setTab] = useState<"log" | "rules">("log");
   const fetch = useServerFn(listBacktests);
   const remove = useServerFn(deleteBacktest);
+  const fetchRules = useServerFn(listBacktestRuleTemplates);
   const query = useQuery({ queryKey: ["backtests"], queryFn: () => fetch({ data: { from: "1970-01-01", to: "2100-01-01" } }) });
+  const rulesQuery = useQuery({ queryKey: ["backtest-rule-templates"], queryFn: () => fetchRules({}) });
+  const ruleTemplates = rulesQuery.data ?? [];
   const all = query.data ?? [];
   const symbols = useMemo(() => [...new Set(all.map(b => b.symbol.toUpperCase()))].sort(), [all]);
   const entries = all.filter(b => !symbolFilter || b.symbol.toUpperCase() === symbolFilter);
@@ -43,6 +47,11 @@ function BacktestPage() {
       <Button variant="pixel" onClick={() => setScanOpen(true)}><ScanLine />Scan screenshot</Button>
       <Button variant="pixel" asChild><Link to="/journal">Journal</Link></Button><Button variant="pixel" asChild><Link to="/summary">Summary</Link></Button>
     </div></header>
+    <nav className="mb-6 flex gap-2" aria-label="Backtest sections">
+      <Button variant="pixel" size="pixel-sm" aria-pressed={tab === "log"} className={tab === "log" ? "pixel-btn-primary" : ""} onClick={() => setTab("log")}>Log</Button>
+      <Button variant="pixel" size="pixel-sm" aria-pressed={tab === "rules"} className={tab === "rules" ? "pixel-btn-primary" : ""} onClick={() => setTab("rules")}><ListChecks />Trading rules</Button>
+    </nav>
+    {tab === "rules" ? <RulesEditor templates={ruleTemplates} loading={rulesQuery.isLoading} onSaved={() => void queryClient.invalidateQueries({ queryKey: ["backtest-rule-templates"] })} /> :
     <section className="space-y-5">
       <h2 className="font-pixel text-xs text-gold">Backtest log</h2>
       <dl className="grid grid-cols-2 gap-4 border-y border-border py-4 sm:grid-cols-4">

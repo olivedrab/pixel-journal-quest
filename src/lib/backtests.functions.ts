@@ -64,3 +64,29 @@ export const deleteBacktest = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type BacktestRuleTemplate = { id: string; label: string; sort_order: number };
+export const listBacktestRuleTemplates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: rows, error } = await context.supabase.from("backtest_rule_templates")
+      .select("id,label,sort_order").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as BacktestRuleTemplate[];
+  });
+const ruleTemplateSchema = z.object({ label: z.string().trim().min(1, "Rule text required").max(160) });
+export const saveBacktestRuleTemplates = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ rules: z.array(ruleTemplateSchema).max(30) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const labels = data.rules.map(r => r.label);
+    if (new Set(labels.map(l => l.toLowerCase())).size !== labels.length) throw new Error("Each rule must be unique.");
+    const { error: deleteError } = await context.supabase.from("backtest_rule_templates").delete().eq("user_id", context.userId);
+    if (deleteError) throw new Error(deleteError.message);
+    if (labels.length) {
+      const { error } = await context.supabase.from("backtest_rule_templates")
+        .insert(labels.map((label, i) => ({ user_id: context.userId, label, sort_order: i + 1 })));
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
