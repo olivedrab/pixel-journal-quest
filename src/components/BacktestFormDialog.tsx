@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Trash2, Upload, Save } from "lucide-react";
 import { createBacktest, updateBacktest } from "@/lib/backtests.functions";
-import type { Backtest } from "@/lib/backtests.functions";
+import type { Backtest, BacktestRuleTemplate } from "@/lib/backtests.functions";
 import { backtestInputSchema, OUTCOME_LABELS } from "@/lib/backtest-input";
 import type { BacktestInput } from "@/lib/backtest-input";
 import { parseScreenshot } from "@/lib/trades.functions";
@@ -11,12 +11,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Overlay } from "./TradeFormDialog";
 
-export function BacktestFormDialog({ date, editing, scan = false, onClose, onSaved }: {
-  date: string; editing?: Backtest | null; scan?: boolean; onClose: () => void; onSaved: () => void;
+export function BacktestFormDialog({ date, editing, scan = false, ruleTemplates = [], onClose, onSaved }: {
+  date: string; editing?: Backtest | null; scan?: boolean; ruleTemplates?: BacktestRuleTemplate[];
+  onClose: () => void; onSaved: () => void;
 }) {
   const [draft, setDraft] = useState<BacktestInput>(() => editing ?? {
     trade_date: date, symbol: "", direction: "long", entry_price: null, target_price: null,
-    stop_loss: null, setup: null, outcome: "pending", notes: null, rules: [], screenshot_url: null,
+    stop_loss: null, setup: null, outcome: "pending", notes: null,
+    rules: ruleTemplates.map(t => ({ label: t.label, checked: false })), screenshot_url: null,
   });
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
