@@ -27,9 +27,13 @@ function BacktestPage() {
   const [editing, setEditing] = useState<Backtest | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [symbolFilter, setSymbolFilter] = useState("");
+  const [tab, setTab] = useState<"log" | "rules">("log");
   const fetch = useServerFn(listBacktests);
   const remove = useServerFn(deleteBacktest);
+  const fetchRules = useServerFn(listBacktestRuleTemplates);
   const query = useQuery({ queryKey: ["backtests"], queryFn: () => fetch({ data: { from: "1970-01-01", to: "2100-01-01" } }) });
+  const rulesQuery = useQuery({ queryKey: ["backtest-rule-templates"], queryFn: () => fetchRules({}) });
+  const ruleTemplates = rulesQuery.data ?? [];
   const all = query.data ?? [];
   const symbols = useMemo(() => [...new Set(all.map(b => b.symbol.toUpperCase()))].sort(), [all]);
   const entries = all.filter(b => !symbolFilter || b.symbol.toUpperCase() === symbolFilter);
