@@ -47,6 +47,11 @@ function BacktestPage() {
       <Button variant="pixel" onClick={() => setScanOpen(true)}><ScanLine />Scan screenshot</Button>
       <Button variant="pixel" asChild><Link to="/journal">Journal</Link></Button><Button variant="pixel" asChild><Link to="/summary">Summary</Link></Button>
     </div></header>
+    <nav className="mb-6 flex gap-2" aria-label="Backtest sections">
+      <Button variant="pixel" size="pixel-sm" aria-pressed={tab === "log"} className={tab === "log" ? "pixel-btn-primary" : ""} onClick={() => setTab("log")}>Log</Button>
+      <Button variant="pixel" size="pixel-sm" aria-pressed={tab === "rules"} className={tab === "rules" ? "pixel-btn-primary" : ""} onClick={() => setTab("rules")}><ListChecks />Trading rules</Button>
+    </nav>
+    {tab === "rules" ? <RulesEditor templates={ruleTemplates} loading={rulesQuery.isLoading} onSaved={() => void queryClient.invalidateQueries({ queryKey: ["backtest-rule-templates"] })} /> :
     <section className="space-y-5">
       <h2 className="font-pixel text-xs text-gold">Backtest log</h2>
       <dl className="grid grid-cols-2 gap-4 border-y border-border py-4 sm:grid-cols-4">
