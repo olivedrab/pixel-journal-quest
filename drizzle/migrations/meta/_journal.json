@@ -22,6 +22,13 @@
       "when": 1791806616323,
       "tag": "0002_backtest_reviews_and_screenshots",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791859372151,
+      "tag": "0003_create_backtest_rule_templates",
+      "breakpoints": true
     }
   ]
 }

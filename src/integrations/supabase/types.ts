@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      backtest_rule_templates: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       backtests: {
         Row: {
           close_type: string | null
